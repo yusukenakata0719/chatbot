@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'chatbot_app.apps.ChatbotAppConfig',
 ]
 
-OPENAI_API_KEY ="openai_api_key"
+OPENAI_API_KEY =""
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -57,7 +57,7 @@ ROOT_URLCONF = 'chatbot_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "chatbot_app/templates"],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -120,7 +120,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = '/sta/'
+
+STARIC_ROOT = BASE_DIR / "staticfiles"
+
+STATICFILES_DIRS = [str(BASE_DIR / "static")]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field

@@ -1,31 +1,86 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
-from .models import PDFDocument
-from llama_index import SimpleDirectoryReader
-from llama_index import GPTVectorStoreIndex
+from .models import UploadedURL, PDFDocument
+from .form import URLUploadForm, PDFUploadForm
+from llama_index import  SimpleDirectoryReader,GPTVectorStoreIndex
+from llama_index import StorageContext, load_index_from_storage, download_loader
+from django.views.generic import ListView
+import os
+import shutil
 import openai
-from llama_index import StorageContext, load_index_from_storage
 openai.api_key = settings.OPENAI_API_KEY
 
+def home(request):
+    return render(request, 'home.html')
+
+def select_data(request):
+    return render(request, 'select_data.html')
 
 def upload_pdf(request):
-    if request.method == 'POST' and request.FILES['pdf_file']:
-        pdf_file = request.FILES['pdf_file']
-        document = PDFDocument(name=pdf_file.name, pdf_file=pdf_file)
-        document.save()
+    if request.method == 'POST':
+        form = PDFUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            pdf_file = form.cleaned_data['pdf_file']
+            document = PDFDocument(name=pdf_file.name, pdf_file=pdf_file)
+            document.save()
         # ファイルの保存に成功した場合の処理を追加
-        return redirect('confirm_upload')
-    return render(request, 'upload_pdf.html')
+        return redirect('pdf_list')
+    else:
+        form = PDFUploadForm()
+    
+    return render(request, 'upload_pdf.html', {'form': form})
 
-def confirm_upload(request):
-    return render(request, 'confirm_upload.html')
+class PDFListView(ListView):
+    template_name = 'pdf_list.html'
+    model = PDFDocument
+
+def delete_pdf(request, pk):
+    number = PDFDocument.objects.all().count()
+    if number > 1:
+        document = PDFDocument.objects.get(pk=pk)
+        document.delete()
+        return redirect('pdf_list')
+    else:
+        return redirect('pdf_list')
 
 def dealing_pdf(request):
     # ファイルの読み込み処理を書く
     documents = SimpleDirectoryReader("pdfs").load_data()
     index = GPTVectorStoreIndex.from_documents(documents)
     index.storage_context.persist()
+    return redirect('delete_all_pdf')
+
+def delete_all_pdf(request):
+    documents = PDFDocument.objects.all()
+    documents.delete()
     return redirect('ask_questions')
+
+
+def upload_web(request):
+    if request.method == 'POST':
+        form = URLUploadForm(request.POST)
+        if form.is_valid():
+            url = form.cleaned_data['url']
+            uploaded_url = UploadedURL(url=url)
+            uploaded_url.save()
+            return redirect('dealing_web')
+    else:
+        form = URLUploadForm() # GETの時fromのインスタンスを作成してテンプレートに渡す
+        return render(request, 'upload_web.html', {'form': form})
+
+def dealing_web(request):
+    BeautifulSoupWebReader = download_loader("BeautifulSoupWebReader")
+    loader = BeautifulSoupWebReader()
+    # アップロードされたURLを取得
+    uploaded_url = UploadedURL.objects.latest('uploaded_at')
+    url = uploaded_url.url
+    # URLを使用してデータを読み込む
+    documents = loader.load_data(urls=[url])
+    index = GPTVectorStoreIndex.from_documents(documents)
+    index.storage_context.persist()
+    return redirect('ask_questions')
+
+
 
 def ask_questions(request):
     if request.method == 'POST':
@@ -39,3 +94,16 @@ def ask_questions(request):
     else:
         return render(request, 'ask.html',)
 
+def setting(request):
+    return render(request, 'setting.html')  # ここで設定を変更する処理を書く
+
+def delete_all(request):
+    shutil.rmtree('./storage')
+    os.mkdir('./storage')
+    return redirect('complete_delete_all')
+
+def confirm_delete_all(request):
+    return render(request, 'confirm_delete_all.html')
+
+def complete_delete_all(request): 
+    return render(request, 'complete_delete_all.html')

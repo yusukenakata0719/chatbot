@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block customcss %}
+<link href="{% static 'css/style.css' %}" rel="stylesheet">
+{% endblock customcss %}
+
+
+{% block content %}
+
+<p>{{ answer }}</p>
+
+{% endblock content %}
+```

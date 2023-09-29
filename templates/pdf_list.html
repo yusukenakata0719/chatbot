@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% for item in object_list %}
+            <li>{{ item.pdf_file }}</li>
+            <li><a href="{% url 'delete_pdf' item.pk %}" class="btn btn-primary">削除</a></li>
+{% endfor %}
+
+Pdfファイルを追加する場合は、以下のボタンを押してください。
+<a href="{% url 'upload_pdf' %}" button type="button" class="btn btn-primary">追加</button></a>
+
+pdfファイルを学習データに追加しますか？
+<a href="{% url 'dealing_pdf' %}" button type="button" class="btn btn-primary">はい</button></a>
+
+{% endblock content %}
+
