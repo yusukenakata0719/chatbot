@@ -2,10 +2,10 @@ from django.shortcuts import render, redirect
 from django.conf import settings
 from .models import UploadedURL, PDFDocument
 from .form import URLUploadForm, PDFUploadForm
-from llama_index import  SimpleDirectoryReader,GPTVectorStoreIndex
+from llama_index import GPTVectorStoreIndex, SimpleDirectoryReader
 from llama_index import StorageContext, load_index_from_storage, download_loader
 from django.views.generic import ListView
-import os
+import os, glob
 import shutil
 import openai
 openai.api_key = settings.OPENAI_API_KEY
@@ -16,39 +16,65 @@ def home(request):
 def select_data(request):
     return render(request, 'select_data.html')
 
-def upload_pdf(request):
+def upload_and_list_pdf(request):
     if request.method == 'POST':
+        # PDFアップロードの処理
         form = PDFUploadForm(request.POST, request.FILES)
         if form.is_valid():
             pdf_file = form.cleaned_data['pdf_file']
             document = PDFDocument(name=pdf_file.name, pdf_file=pdf_file)
             document.save()
-        # ファイルの保存に成功した場合の処理を追加
-        return redirect('pdf_list')
+            return redirect('upload_and_list_pdf')
+
     else:
         form = PDFUploadForm()
+
+    # PDFドキュメントのリストを取得
+    pdf_documents = PDFDocument.objects.all()
+
+    context = {
+        'form': form,
+        'pdf_documents': pdf_documents,
+    }
     
-    return render(request, 'upload_pdf.html', {'form': form})
+    return render(request, 'upload_and_list_pdf.html', context)
 
 class PDFListView(ListView):
-    template_name = 'pdf_list.html'
+    template_name = 'upload_and_list_pdf.html'
     model = PDFDocument
+
 
 def delete_pdf(request, pk):
     number = PDFDocument.objects.all().count()
-    if number > 1:
+    if number > 0:
         document = PDFDocument.objects.get(pk=pk)
         document.delete()
-        return redirect('pdf_list')
+        return redirect('upload_and_list_pdf')
     else:
-        return redirect('pdf_list')
+        return redirect('upload_and_list_pdf')
+
+
 
 def dealing_pdf(request):
-    # ファイルの読み込み処理を書く
-    documents = SimpleDirectoryReader("pdfs").load_data()
-    index = GPTVectorStoreIndex.from_documents(documents)
-    index.storage_context.persist()
-    return redirect('delete_all_pdf')
+    directory_path = "/Users/yu-suke/pyworks/projects/chatbot_project/pdfs"
+    pdf_files = glob.glob(os.path.join(directory_path, '*.pdf'))  # ディレクトリ内のPDFファイルを取得
+    if len(os.listdir(directory_path)) > 0:
+        if pdf_files:
+            CJKPDFReader = download_loader("CJKPDFReader")
+            loader = CJKPDFReader()
+            documents = []
+
+            for pdf_file in pdf_files:
+                document = loader.load_data(pdf_file)
+                documents.append(document)
+
+            index = GPTVectorStoreIndex.from_documents(documents)
+            index.storage_context.persist()
+            return redirect('delete_all_pdf')
+    else:
+        return redirect('upload_and_list_pdf')
+
+
 
 def delete_all_pdf(request):
     documents = PDFDocument.objects.all()
@@ -93,6 +119,7 @@ def ask_questions(request):
         return render(request, 'answer.html', {'answer':answer})
     else:
         return render(request, 'ask.html',)
+
 
 def setting(request):
     return render(request, 'setting.html')  # ここで設定を変更する処理を書く

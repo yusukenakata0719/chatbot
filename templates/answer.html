@@ -8,7 +8,17 @@
 
 {% block content %}
 
-<p>{{ answer }}</p>
+<div class="container">
+    <h1>Answer</h1>
+    <div style="padding:60px">
+        {{ answer }}
+    </div>
+
+    <div style="padding:60px">
+        <a href="{% url 'ask_questions' %}" class="icon-link">戻る</button></a>
+    </div>
+</div>
+
 
 {% endblock content %}
 ```

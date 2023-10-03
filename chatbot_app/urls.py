@@ -3,7 +3,7 @@ from . import views
 
 urlpatterns = [
     path('select_data/', views.select_data, name='select_data'),
-    path('upload_pdf/', views.upload_pdf, name='upload_pdf'),
+    path('upload_and_list_pdf/', views.upload_and_list_pdf, name='upload_and_list_pdf'),
     path('pdf_list/', views.PDFListView.as_view(), name='pdf_list'),
     path('delete_pdf/<int:pk>/', views.delete_pdf, name='delete_pdf'),
     path('dealing_pdf/', views.dealing_pdf, name='dealing_pdf'),

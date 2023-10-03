@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'chatbot_app.apps.ChatbotAppConfig',
 ]
 
-OPENAI_API_KEY =""
+OPENAI_API_KEY ="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"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

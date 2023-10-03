@@ -4,11 +4,12 @@
 
 {% block content %}
     <form method="post" enctype="multipart/form-data">{% csrf_token %}
-        <div class="mb-3">
+        <div class=container>
             <label for="question" class="form-label">質問内容</label>
-            <input type="text" class="form-control" name="question" size="10" placeholder="question">
+            <input type="text" class="form-control" name="question" placeholder="question">
+            <div style="padding:10px"></div>
+            <button type="submit" class="btn btn-primary">質問を送る</button>
         </div>
-        <button type="submit" class="btn btn-primary">質問を送る</button>
     </form>
 {% endblock content %}
 

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload PDF</title>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+            <h1>PDF Upload</h1>
+            <div style="padding:70px">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <div style="padding:70px">
+                    <button type="submit">Upload PDF</button>
+                </div>
+                
+            </form>
+            </div>
+            </div>
+            <div class="col-1">
+            </div>
+            <div class="col" style="height:400px;padding:10px;border:solid 1px #000000;">
+            <h2>PDF List</h2>
+            <ul>
+                {% for pdf_document in pdf_documents %}
+                    <li>{{ pdf_document.pdf_file.name }} - {{ pdf_document.uploaded_at }}<a href="{% url 'delete_pdf' pdf_document.pk %}" class="icon-link">削除</a></li>
+                {% empty %}
+                PDFファイルをアップロードしてください
+                {% endfor %}
+            </ul>
+            </div>
+            <div style="padding:30px">
+                pdfファイルを学習データに追加しますか？
+                <a href="{% url 'dealing_pdf' %}" button type="button" class="btn btn-primary">はい</button></a>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
+{% endblock content %}
+```
