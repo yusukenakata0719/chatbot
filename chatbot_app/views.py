@@ -5,17 +5,24 @@ from .form import URLUploadForm, PDFUploadForm
 from llama_index import GPTVectorStoreIndex, SimpleDirectoryReader
 from llama_index import StorageContext, load_index_from_storage, download_loader
 from django.views.generic import ListView
+from django.contrib.auth.models import User
+from django.db import IntegrityError
+from django.contrib.auth import authenticate, login, logout
 import os, glob
 import shutil
 import openai
 openai.api_key = settings.OPENAI_API_KEY
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def home(request):
     return render(request, 'home.html')
 
+@login_required
 def select_data(request):
     return render(request, 'select_data.html')
 
+@login_required
 def upload_and_list_pdf(request):
     if request.method == 'POST':
         # PDFアップロードの処理
@@ -44,6 +51,7 @@ class PDFListView(ListView):
     model = PDFDocument
 
 
+@login_required
 def delete_pdf(request, pk):
     number = PDFDocument.objects.all().count()
     if number > 0:
@@ -53,35 +61,22 @@ def delete_pdf(request, pk):
     else:
         return redirect('upload_and_list_pdf')
 
-
-
+@login_required
 def dealing_pdf(request):
-    directory_path = "/Users/yu-suke/pyworks/projects/chatbot_project/pdfs"
-    pdf_files = glob.glob(os.path.join(directory_path, '*.pdf'))  # ディレクトリ内のPDFファイルを取得
-    if len(os.listdir(directory_path)) > 0:
-        if pdf_files:
-            CJKPDFReader = download_loader("CJKPDFReader")
-            loader = CJKPDFReader()
-            documents = []
-
-            for pdf_file in pdf_files:
-                document = loader.load_data(pdf_file)
-                documents.append(document)
-
-            index = GPTVectorStoreIndex.from_documents(documents)
-            index.storage_context.persist()
-            return redirect('delete_all_pdf')
-    else:
-        return redirect('upload_and_list_pdf')
+    # ファイルの読み込み処理を書く
+    documents = SimpleDirectoryReader("pdfs").load_data()
+    index = GPTVectorStoreIndex.from_documents(documents)
+    index.storage_context.persist()
+    return redirect('delete_all_pdf')
 
 
-
+@login_required
 def delete_all_pdf(request):
     documents = PDFDocument.objects.all()
     documents.delete()
     return redirect('ask_questions')
 
-
+@login_required
 def upload_web(request):
     if request.method == 'POST':
         form = URLUploadForm(request.POST)
@@ -94,6 +89,7 @@ def upload_web(request):
         form = URLUploadForm() # GETの時fromのインスタンスを作成してテンプレートに渡す
         return render(request, 'upload_web.html', {'form': form})
 
+@login_required
 def dealing_web(request):
     BeautifulSoupWebReader = download_loader("BeautifulSoupWebReader")
     loader = BeautifulSoupWebReader()
@@ -107,7 +103,7 @@ def dealing_web(request):
     return redirect('ask_questions')
 
 
-
+@login_required
 def ask_questions(request):
     if request.method == 'POST':
         question = request.POST['question']
@@ -120,17 +116,52 @@ def ask_questions(request):
     else:
         return render(request, 'ask.html',)
 
-
+@login_required
 def setting(request):
     return render(request, 'setting.html')  # ここで設定を変更する処理を書く
 
+@login_required
 def delete_all(request):
     shutil.rmtree('./storage')
     os.mkdir('./storage')
     return redirect('complete_delete_all')
 
+@login_required
 def confirm_delete_all(request):
     return render(request, 'confirm_delete_all.html')
 
+@login_required
 def complete_delete_all(request): 
     return render(request, 'complete_delete_all.html')
+
+
+def sign_up(request):
+    if request.method == "POST":
+        username = request.POST['username']
+        password = request.POST['password']
+        try:
+            user = User.objects.create_user(username, '', password)
+            return redirect('log_in')
+        except IntegrityError:
+            return render (request, 'signup.html', {'error':'このユーザーは既に登録されています'})
+        
+    else:
+        return render(request, 'signup.html',{})
+
+
+def log_in(request):
+    if request.method == "POST":
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            return render(request, 'login.html',{'error':'ログインに失敗しました'})
+    else:
+        return render(request, 'login.html',{})
+    
+def log_out(request):
+    logout(request)
+    return redirect('log_in')

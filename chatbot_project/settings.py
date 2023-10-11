@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'chatbot_app.apps.ChatbotAppConfig',
 ]
 
-OPENAI_API_KEY ="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"
+OPENAI_API_KEY ="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"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -131,3 +131,5 @@ STATICFILES_DIRS = [str(BASE_DIR / "static")]
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+LOGIN_URL = 'log_out'
