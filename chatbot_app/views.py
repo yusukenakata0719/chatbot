@@ -14,6 +14,7 @@ import openai
 openai.api_key = settings.OPENAI_API_KEY
 from django.contrib.auth.decorators import login_required
 
+
 @login_required
 def home(request):
     return render(request, 'home.html')
@@ -25,26 +26,27 @@ def select_data(request):
 @login_required
 def upload_and_list_pdf(request):
     if request.method == 'POST':
-        # PDFアップロードの処理
         form = PDFUploadForm(request.POST, request.FILES)
         if form.is_valid():
             pdf_file = form.cleaned_data['pdf_file']
-            document = PDFDocument(name=pdf_file.name, pdf_file=pdf_file)
-            document.save()
+            # ユーザーとPDFファイルを関連付けて保存
+            user_pdf = PDFDocument(user=request.user, pdf_file=pdf_file)
+            user_pdf.save()
             return redirect('upload_and_list_pdf')
 
     else:
         form = PDFUploadForm()
 
-    # PDFドキュメントのリストを取得
-    pdf_documents = PDFDocument.objects.all()
+    # ユーザーごとのPDFドキュメントのリストを取得
+    pdf_documents = PDFDocument.objects.filter(user=request.user)
 
     context = {
         'form': form,
         'pdf_documents': pdf_documents,
     }
-    
+
     return render(request, 'upload_and_list_pdf.html', context)
+
 
 class PDFListView(ListView):
     template_name = 'upload_and_list_pdf.html'
