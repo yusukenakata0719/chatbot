@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
-from .models import UploadedURL, PDFDocument
+from .models import UploadedURL, PDFDocument, JSONDocument
 from .form import URLUploadForm, PDFUploadForm
 from llama_index import GPTVectorStoreIndex, SimpleDirectoryReader
 from llama_index import StorageContext, load_index_from_storage, download_loader
@@ -13,6 +13,7 @@ import shutil
 import openai
 openai.api_key = settings.OPENAI_API_KEY
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 
 
 @login_required
@@ -62,20 +63,54 @@ def delete_pdf(request, pk):
         return redirect('upload_and_list_pdf')
     else:
         return redirect('upload_and_list_pdf')
+from django.core.files import File
 
-@login_required
 def dealing_pdf(request):
-    # ファイルの読み込み処理を書く
     documents = SimpleDirectoryReader("pdfs").load_data()
     index = GPTVectorStoreIndex.from_documents(documents)
     index.storage_context.persist()
-    return redirect('delete_all_pdf')
 
+    json_directory = "storage"  # ディレクトリのパスを設定
 
-@login_required
-def delete_all_pdf(request):
-    documents = PDFDocument.objects.all()
-    documents.delete()
+    # ディレクトリ内のJSONファイルを取得
+    json_files = [f for f in os.listdir(json_directory) if f.endswith(".json")]
+
+    for json_file in json_files:
+        json_file_path = os.path.join(json_directory, json_file)
+        
+        # JSONDocumentオブジェクトを作成して保存
+        user = request.user  # ログインユーザーに関連する情報を取得
+        current_datetime = timezone.now()
+        name = "Processed JSON - " + current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # JSONファイルを`json_file`フィールドに設定
+        with open(json_file_path, 'rb') as file:
+            json_document = JSONDocument(user=user, name=name)
+            json_document.json_file.save(json_file, File(file))
+            json_document.save()
+
+    #pdfsディレクトリ内のファイルを削除
+    pdf_directory = "pdfs"  # ディレクトリのパスを設定
+    for filename in os.listdir(pdf_directory):
+        file_path = os.path.join(pdf_directory, filename)
+        
+        # ファイルを削除
+        try:
+            os.remove(file_path)
+        except OSError as e:
+            return redirect('upload_and_list_pdf', {'error': e})
+        
+    #jsonsディレクトリ内のファイルを削除
+    # ディレクトリ内のファイルを取得
+    for filename in os.listdir(json_directory):
+        file_path = os.path.join(json_directory, filename)
+        
+        # ファイルを削除
+        try:
+            os.remove(file_path)
+        except OSError as e:
+            return redirect('upload_and_list_pdf', {'error': e})
+    
     return redirect('ask_questions')
 
 @login_required

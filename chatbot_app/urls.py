@@ -7,7 +7,6 @@ urlpatterns = [
     path('pdf_list/', views.PDFListView.as_view(), name='pdf_list'),
     path('delete_pdf/<int:pk>/', views.delete_pdf, name='delete_pdf'),
     path('dealing_pdf/', views.dealing_pdf, name='dealing_pdf'),
-    path('delete_all_pdf/', views.delete_all_pdf, name='delete_all_pdf'),
     path('upload_web/', views.upload_web, name='upload_web'),
     path('dealing_web/', views.dealing_web, name='dealing_web'),
     path('ask/', views.ask_questions, name='ask_questions'),
