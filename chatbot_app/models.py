@@ -3,6 +3,7 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 import os
 from django.contrib.auth.models import User
+from django.conf import settings
 
 class PDFDocument(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -43,6 +44,7 @@ class UploadedURL(models.Model):
     def __str__(self):
         return self.url
 
+
 class JSONDocument(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
@@ -56,3 +58,4 @@ class JSONDocument(models.Model):
         if self.json_file:
             self.name = self.json_file.name
         super(JSONDocument, self).save(*args, **kwargs)
+

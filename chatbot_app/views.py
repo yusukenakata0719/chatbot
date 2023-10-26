@@ -88,7 +88,7 @@ def dealing_pdf(request):
 #jsonファイルをモデルに保存
 def save_json_to_model(request):
     # ファイルのパスを取得
-    json_directory = "/Users/yu-suke/pyworks/projects/chatbot_project/media/jsons"  # ディレクトリのパスを設定
+    json_directory = os.path.join(settings.MEDIA_ROOT, 'jsons', str(request.user.id))
     json_file_paths = glob.glob(os.path.join(json_directory, '*.json'))
     for json_file_path in json_file_paths:
         # JSONファイルを`json_file`フィールドに設定
