@@ -70,10 +70,19 @@ from django.core.files import File
 #pdfファイルを学習させる
 def dealing_pdf(request):
     user = request.user
-    pdf_directory= os.path.join(settings.MEDIA_ROOT, 'pdfs', str(user.id))
+    user_id = str(user.id)
+    # JSONファイルを保存するディレクトリパスを生成
+    json_directory = os.path.join(settings.MEDIA_ROOT, 'jsons', user_id)
+    # ディレクトリが存在しない場合に作成
+    os.makedirs(json_directory, exist_ok=True)
+    # ユーザーごとのPDFのディレクトリのパスを取得
+    pdf_directory = os.path.join(settings.MEDIA_ROOT, 'pdfs', user_id)
+
+    # JSONデータをファイルに保存
     documents = SimpleDirectoryReader(pdf_directory).load_data()
     index = GPTVectorStoreIndex.from_documents(documents)
-    index.storage_context.persist(persist_dir="/Users/yu-suke/pyworks/projects/chatbot_project/media/jsons")
+    index.storage_context.persist(persist_dir=json_directory)
+
     return redirect('save_json_to_model')
 
 #jsonファイルをモデルに保存
