@@ -45,17 +45,5 @@ class UploadedURL(models.Model):
         return self.url
 
 
-class JSONDocument(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
-    json_file = models.FileField(null=True)
 
-    def __str__(self):
-        return self.name
-
-    def save(self, *args, **kwargs):
-        # ファイルがアップロードされた場合に、nameフィールドにファイル名を設定
-        if self.json_file:
-            self.name = self.json_file.name
-        super(JSONDocument, self).save(*args, **kwargs)
 

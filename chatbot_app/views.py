@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
-from .models import UploadedURL, PDFDocument, JSONDocument
+from .models import UploadedURL, PDFDocument
 from .form import URLUploadForm, PDFUploadForm 
 from llama_index import StorageContext, load_index_from_storage, download_loader,GPTVectorStoreIndex, SimpleDirectoryReader
 from django.views.generic import ListView
@@ -83,7 +83,7 @@ def dealing_pdf(request):
     index = GPTVectorStoreIndex.from_documents(documents)
     index.storage_context.persist(persist_dir=json_directory)
 
-    return redirect('save_json_to_model')
+    return redirect('reset_pdf')
 
 #jsonファイルをモデルに保存
 def save_json_to_model(request):
@@ -95,30 +95,19 @@ def save_json_to_model(request):
         with open(json_file_path, 'rb') as file:
             json_document = JSONDocument(user=request.user, json_file=File(file))
             json_document.save()
+    return redirect('reset_pdf')
+
+#pdfファイルを削除
+def reset_pdf(request):
+    # ユーザーごとのPDFのディレクトリのパスを取得
+    pdf_directory = os.path.join(settings.MEDIA_ROOT, 'pdfs', str(request.user.id))
+    if os.path.exists(pdf_directory) and os.path.isdir(pdf_directory):
+        # ディレクトリ内のすべてのファイルを削除
+        for filename in os.listdir(pdf_directory):
+            file_path = os.path.join(pdf_directory, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
     return redirect('ask_questions')
-
-#jsonファイルをモデルからローカルに保存
-def save_json_from_model(request):
-    # ユーザーごとのJSONドキュメントのリストを取得
-    json_documents = JSONDocument.objects.filter(user=request.user)
-    
-    # ローカルの保存先ディレクトリを設定
-    json_directory = os.path.join(settings.MEDIA_ROOT, 'user_jsons')
-    
-    # ユーザーごとのJSONドキュメントをローカルに保存
-    for json_document in json_documents:
-        # ユーザーごとのディレクトリを作成 (存在しない場合)
-        user_directory = os.path.join(json_directory, str(request.user.id))
-        os.makedirs(user_directory, exist_ok=True)
-
-        # ファイルの保存パスを生成
-        json_file_path = os.path.join(user_directory, json_document.json_file.name)
-
-        # ファイルをローカルに保存
-        with open(json_file_path, 'wb') as file:
-            file.write(json_document.json_file.read())
-    
-    return redirect('home')
 
 @login_required
 def ask_questions(request):
@@ -126,7 +115,8 @@ def ask_questions(request):
         question = request.POST['question']
         # ここで質問に対する回答を取得する処理を書く
         #jsonファイルの読み込みディレクトリを確認する！！
-        strorage_context = StorageContext.from_defaults(persist_dir='jsons')
+        json_directory = os.path.join(settings.MEDIA_ROOT, 'jsons', str(request.user.id))
+        strorage_context = StorageContext.from_defaults(persist_dir=json_directory)
         index = load_index_from_storage(strorage_context)
         query_engine = index.as_query_engine()
         answer = query_engine.query(question)
@@ -166,9 +156,14 @@ def setting(request):
 
 @login_required
 def delete_all(request):
-    shutil.rmtree('./storage')
-    os.mkdir('./storage')
-    return redirect('complete_delete_all')
+    json_directory = os.path.join(settings.MEDIA_ROOT, 'jsons', str(request.user.id))
+    if os.path.exists(json_directory) and os.path.isdir(json_directory):
+        # ディレクトリ内のすべてのファイルを削除
+        for filename in os.listdir(json_directory):
+            file_path = os.path.join(json_directory, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)    
+        return redirect('home')
 
 @login_required
 def confirm_delete_all(request):
