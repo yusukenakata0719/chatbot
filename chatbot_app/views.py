@@ -1,9 +1,8 @@
 from django.shortcuts import render, redirect
 from django.conf import settings
 from .models import UploadedURL, PDFDocument, JSONDocument
-from .form import URLUploadForm, PDFUploadForm
-from llama_index import GPTVectorStoreIndex, SimpleDirectoryReader
-from llama_index import StorageContext, load_index_from_storage, download_loader
+from .form import URLUploadForm, PDFUploadForm 
+from llama_index import StorageContext, load_index_from_storage, download_loader,GPTVectorStoreIndex, SimpleDirectoryReader
 from django.views.generic import ListView
 from django.contrib.auth.models import User
 from django.db import IntegrityError
@@ -14,7 +13,10 @@ import openai
 openai.api_key = settings.OPENAI_API_KEY
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-
+import json
+from django.views import View
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import JsonResponse
 
 @login_required
 def home(request):
@@ -65,53 +67,63 @@ def delete_pdf(request, pk):
         return redirect('upload_and_list_pdf')
 from django.core.files import File
 
+#pdfファイルを学習させる
 def dealing_pdf(request):
-    documents = SimpleDirectoryReader("pdfs").load_data()
+    user = request.user
+    pdf_directory= os.path.join(settings.MEDIA_ROOT, 'pdfs', str(user.id))
+    documents = SimpleDirectoryReader(pdf_directory).load_data()
     index = GPTVectorStoreIndex.from_documents(documents)
-    index.storage_context.persist()
+    index.storage_context.persist(persist_dir="/Users/yu-suke/pyworks/projects/chatbot_project/media/jsons")
+    return redirect('save_json_to_model')
 
-    json_directory = "storage"  # ディレクトリのパスを設定
-
-    # ディレクトリ内のJSONファイルを取得
-    json_files = [f for f in os.listdir(json_directory) if f.endswith(".json")]
-
-    for json_file in json_files:
-        json_file_path = os.path.join(json_directory, json_file)
-        
-        # JSONDocumentオブジェクトを作成して保存
-        user = request.user  # ログインユーザーに関連する情報を取得
-        current_datetime = timezone.now()
-        name = "Processed JSON - " + current_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        
+#jsonファイルをモデルに保存
+def save_json_to_model(request):
+    # ファイルのパスを取得
+    json_directory = "/Users/yu-suke/pyworks/projects/chatbot_project/media/jsons"  # ディレクトリのパスを設定
+    json_file_paths = glob.glob(os.path.join(json_directory, '*.json'))
+    for json_file_path in json_file_paths:
         # JSONファイルを`json_file`フィールドに設定
         with open(json_file_path, 'rb') as file:
-            json_document = JSONDocument(user=user, name=name)
-            json_document.json_file.save(json_file, File(file))
+            json_document = JSONDocument(user=request.user, json_file=File(file))
             json_document.save()
-
-    #pdfsディレクトリ内のファイルを削除
-    pdf_directory = "pdfs"  # ディレクトリのパスを設定
-    for filename in os.listdir(pdf_directory):
-        file_path = os.path.join(pdf_directory, filename)
-        
-        # ファイルを削除
-        try:
-            os.remove(file_path)
-        except OSError as e:
-            return redirect('upload_and_list_pdf', {'error': e})
-        
-    #jsonsディレクトリ内のファイルを削除
-    # ディレクトリ内のファイルを取得
-    for filename in os.listdir(json_directory):
-        file_path = os.path.join(json_directory, filename)
-        
-        # ファイルを削除
-        try:
-            os.remove(file_path)
-        except OSError as e:
-            return redirect('upload_and_list_pdf', {'error': e})
-    
     return redirect('ask_questions')
+
+#jsonファイルをモデルからローカルに保存
+def save_json_from_model(request):
+    # ユーザーごとのJSONドキュメントのリストを取得
+    json_documents = JSONDocument.objects.filter(user=request.user)
+    
+    # ローカルの保存先ディレクトリを設定
+    json_directory = os.path.join(settings.MEDIA_ROOT, 'user_jsons')
+    
+    # ユーザーごとのJSONドキュメントをローカルに保存
+    for json_document in json_documents:
+        # ユーザーごとのディレクトリを作成 (存在しない場合)
+        user_directory = os.path.join(json_directory, str(request.user.id))
+        os.makedirs(user_directory, exist_ok=True)
+
+        # ファイルの保存パスを生成
+        json_file_path = os.path.join(user_directory, json_document.json_file.name)
+
+        # ファイルをローカルに保存
+        with open(json_file_path, 'wb') as file:
+            file.write(json_document.json_file.read())
+    
+    return redirect('home')
+
+@login_required
+def ask_questions(request):
+    if request.method == 'POST':
+        question = request.POST['question']
+        # ここで質問に対する回答を取得する処理を書く
+        #jsonファイルの読み込みディレクトリを確認する！！
+        strorage_context = StorageContext.from_defaults(persist_dir='jsons')
+        index = load_index_from_storage(strorage_context)
+        query_engine = index.as_query_engine()
+        answer = query_engine.query(question)
+        return render(request, 'answer.html', {'answer':answer})
+    else:
+        return render(request, 'ask.html',)
 
 @login_required
 def upload_web(request):
@@ -138,20 +150,6 @@ def dealing_web(request):
     index = GPTVectorStoreIndex.from_documents(documents)
     index.storage_context.persist()
     return redirect('ask_questions')
-
-
-@login_required
-def ask_questions(request):
-    if request.method == 'POST':
-        question = request.POST['question']
-        # ここで質問に対する回答を取得する処理を書く
-        strorage_context = StorageContext.from_defaults(persist_dir='./storage')
-        index = load_index_from_storage(strorage_context)
-        query_engine = index.as_query_engine()
-        answer = query_engine.query(question)
-        return render(request, 'answer.html', {'answer':answer})
-    else:
-        return render(request, 'ask.html',)
 
 @login_required
 def setting(request):

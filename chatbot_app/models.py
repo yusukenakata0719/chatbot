@@ -4,14 +4,28 @@ from django.dispatch import receiver
 import os
 from django.contrib.auth.models import User
 
-
 class PDFDocument(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    pdf_file = models.FileField(upload_to='pdfs/',null=True)
+    pdf_file = models.FileField(upload_to='pdfs/', null=True)  # ファイル名は自動的に生成されます
+
     def __str__(self):
         return self.name
-    
+
+    def save(self, *args, **kwargs):
+        # ファイルがアップロードされた場合に、nameフィールドにファイル名を設定
+        if self.pdf_file:
+            self.name = self.pdf_file.name
+
+        super(PDFDocument, self).save(*args, **kwargs)
+
+    def get_upload_path(instance, filename):
+        # ユーザーごとにディレクトリを作成
+        user_directory = str(instance.user.id)
+        return os.path.join('pdfs', user_directory, filename)
+
+    pdf_file.upload_to = get_upload_path
+
 @receiver(pre_delete, sender=PDFDocument)
 def delete_pdf_file(sender, instance, **kwargs):
     if instance.pdf_file:
@@ -32,7 +46,13 @@ class UploadedURL(models.Model):
 class JSONDocument(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    json_file = models.FileField(upload_to='jsons/',null=True)
+    json_file = models.FileField(null=True)
+
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        # ファイルがアップロードされた場合に、nameフィールドにファイル名を設定
+        if self.json_file:
+            self.name = self.json_file.name
+        super(JSONDocument, self).save(*args, **kwargs)

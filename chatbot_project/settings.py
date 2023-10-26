@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     'chatbot_app.apps.ChatbotAppConfig',
 ]
 
-OPENAI_API_KEY ="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"
+OPENAI_API_KEY ="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"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -119,6 +119,10 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
+
+MEDIA_URL = 'med/'
+
+MEDIA_ROOT = BASE_DIR / "media"
 
 STATIC_URL = '/sta/'
 
